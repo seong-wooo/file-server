@@ -8,9 +8,20 @@
 #include <string.h>
 #include <errno.h>
 
-
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR   -1
+
+#define READ 'r'
+#define WRITE 'a'
+#define DELETE 'd'
+#define QUIT 'q'
+#define LIST 'l'
+
+#define OPTION "option"
+#define FILENAME "filename"
+#define OFFSET "offset"
+#define DATA "data"
+#define LENGTH "length"
 
 typedef int SOCKET;
 

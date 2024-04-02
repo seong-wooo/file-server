@@ -4,6 +4,12 @@ char *SERVERIP = (char *) "127.0.0.1";
 #define SERVERPORT 9000
 #define BUFSIZE 512
 
+int getoption(void);
+int getoffset(void);
+int getlength(void);
+void getdata(char* data);
+void getfilename(char* filename);
+
 int main(int argc, char *argv[])
 {
     int retval;
@@ -27,43 +33,56 @@ int main(int argc, char *argv[])
     // 데이터 통신에 사용할 변수
     char buf[BUFSIZE + 1];
     int len;
+    
+    
+    
+    char option;
+    char filename[100];
+    int offset;
+    int length;
+    char data[100];
+    char request[300];
 
-    // 서버와 데이터 통신
     while(1) {
-        // 데이터 입력
-        printf("\n[보낼 데이터]");
-        if (fgets(buf, BUFSIZE + 1, stdin) == NULL) {
+        option = getoption();
+        
+        if (option == LIST) {
+            sprintf(request, "%s:%c", OPTION, option);
+        }
+
+        else if (option == READ) {
+            getfilename(filename);
+            offset = getoffset();
+            length = getlength();
+            sprintf(request, "%s:%c\n%s:%s\n%s:%d\n%s:%d", OPTION, option, FILENAME, filename, OFFSET, offset, LENGTH, length);
+        }
+
+        else if (option == WRITE) {
+            getfilename(filename);
+            offset = getoffset();
+            getdata(data);
+            sprintf(request, "%s:%c\n%s:%s\n%s:%d\n%s:%s", OPTION, option, FILENAME, filename, OFFSET, offset, DATA, data);
+        } 
+        
+        else if (option == DELETE) {
+            // 파일 제거
+        }
+        
+        else {
             break;
         }
 
-        // '\n' 문자 제거
-        len = (int)strlen(buf);
-        if (buf[len - 1] == '\n') {
-            buf[len - 1] = '\0';
-        }
-
-        if (strlen(buf) == 0) {
-            break;
-        }
-
-        // 데이터 보내기
-        retval = send(sock, buf, (int)strlen(buf), 0);
+        retval = send(sock, request, (int)strlen(request), 0);
         if (retval == SOCKET_ERROR) {
             err_display("send()");
             break;
         }
 
-        // 데이터 받기
         retval = recv(sock, buf, retval, MSG_WAITALL);
         if (retval == SOCKET_ERROR) {
             err_display("recv()");
             break;
         }
-        
-        else if (retval == 0)
-        {
-            break;
-        }   
 
         // 받은 데이터 출력
         buf[retval] = '\0';
@@ -74,3 +93,41 @@ int main(int argc, char *argv[])
     return 0;
 }   
 
+int getoption(void) {
+    char option;
+    do {
+        printf("[파일 리스트 조회: %c / 파일 읽기 : %c / 파일 쓰기 : %c / 파일 삭제 : %c / 종료 : %c]: ", LIST, READ, WRITE, DELETE, QUIT);
+        scanf("%c", &option);
+        getchar();
+    } while (option != LIST && option != READ && option != WRITE && option != DELETE && option != QUIT);
+
+    return option;
+}
+
+int getoffset(void) {
+    int offset;
+    printf("[오프셋]: ");
+    scanf("%d", &offset);
+    getchar();
+    return offset;
+}
+
+int getlength(void) {
+    int length;
+    printf("[읽을 길이]: ");
+    scanf("%d", &length);
+    getchar();
+    return length;
+}
+
+void getdata(char* data) {
+    printf("[쓸 내용]: ");
+    fgets(data, sizeof(data), stdin);
+    data[strlen(data) - 1] = '\0';
+}
+
+void getfilename(char* filename) {
+    printf("[파일 이름]: ");
+    fgets(filename, sizeof(filename), stdin);
+    filename[strlen(filename) - 1] = '\0';
+}
