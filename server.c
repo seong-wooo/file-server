@@ -1,5 +1,6 @@
 #include "Common.h"
 #include "hash.h"
+#include <dirent.h>
 
 #define SERVERPORT 9000
 #define BUFSIZE 10000
@@ -90,7 +91,20 @@ int main(int argc, char const *argv[])
 
 
             else if (*option == LIST) {
+                DIR *dir;
+                struct dirent *entry;
 
+                dir = opendir(".");
+                if (dir == NULL) {
+                    perror("Error opening dir");
+                }
+
+                while ((entry = readdir(dir)) != NULL) {
+                    strcat(buf, entry->d_name);
+                    strcat(buf, "\n");
+                }
+                
+                closedir(dir);
             }
 
             retval = send(client_sock, buf, BUFSIZE, 0);
