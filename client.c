@@ -8,6 +8,7 @@ void _connect_to_server(SOCKET sock, char* ip, int port);
 void _get_list(char* request);
 void _get_read(char* request);
 void _get_write(char* request);
+void _get_delete(char* request);
 int _get_option(void);
 int _get_offset(void);
 int _get_length(void);
@@ -41,6 +42,7 @@ int main(int argc, char *argv[])
         } 
         
         else if (option == DELETE) {
+            _get_delete(request);
         }
         
         else {
@@ -115,6 +117,13 @@ void _get_write(char* request) {
     offset = _get_offset();
     _get_data(data);
     sprintf(request, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%s", OPTION, TOKEN_PARSER, WRITE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, DATA, TOKEN_PARSER, data);
+}
+
+void _get_delete(char* request) {
+    char filename[1000];
+
+    _get_filename(filename);
+    sprintf(request, "%s%s%c%s%s%s%s", OPTION, TOKEN_PARSER, DELETE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename);
 }
 
 int _get_offset(void) {

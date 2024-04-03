@@ -81,7 +81,11 @@ int main(int argc, char const *argv[])
             }
 
             else if (*option == DELETE) {
-
+                if (unlink(get(hashMap, FILENAME)) == 0) {
+                    strcpy(buf, "File deleted successfully");
+                } else {
+                    strcpy(buf, "Error deleting file");
+                }
             }
 
 
