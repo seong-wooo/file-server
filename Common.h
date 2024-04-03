@@ -12,7 +12,7 @@
 #define SOCKET_ERROR   -1
 
 #define READ 'r'
-#define WRITE 'a'
+#define WRITE 'w'
 #define DELETE 'd'
 #define QUIT 'q'
 #define LIST 'l'
@@ -22,6 +22,9 @@
 #define OFFSET "offset"
 #define DATA "data"
 #define LENGTH "length"
+
+#define LINE_PARSER "\n"
+#define TOKEN_PARSER ":"
 
 typedef int SOCKET;
 
@@ -36,3 +39,10 @@ void err_display(const char *msg) {
     printf("[%s] %s\n", msg, msgbuf);
 }
 
+SOCKET create_socket(void) {
+    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == INVALID_SOCKET) {
+        err_quit("socket()");
+    }
+    return sock;
+}
