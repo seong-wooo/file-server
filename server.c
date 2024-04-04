@@ -1,9 +1,13 @@
 #include "Common.h"
 #include "hash.h"
+#include "log.h"
 #include <dirent.h>
+#include <time.h>
+
 
 #define SERVERPORT 9000
 #define BUFSIZE 10000
+#define LOGNAME "FILE_SERVER"
 
 void _bind(SOCKET sock, int port);
 void _listen(SOCKET sock, int maxconn);
@@ -25,7 +29,6 @@ int main(int argc, char const *argv[])
     char buf[BUFSIZE + 1];
     int hash_size = 10;
     FILE* fp;
-    FILE* lfp;
 
     while (1) {
         client_sock = _accept(listen_sock, &client_addr);
@@ -50,7 +53,7 @@ int main(int argc, char const *argv[])
                 char* filename = get(hashMap, FILENAME);
                 int offset = atoi(get(hashMap, OFFSET));
                 char* data = get(hashMap, DATA);
-                
+                                
                 fp = fopen(filename, "r+");
                 if (fp == NULL) {
                     fp = fopen(filename, "w");
@@ -65,10 +68,14 @@ int main(int argc, char const *argv[])
                 if (offset > fileSize) {
                     offset = fileSize;
                 } 
-                    
-                fseek(fp, offset, SEEK_SET);                
 
+                fseek(fp, offset, SEEK_SET);
                 fputs(data, fp);
+                
+                char logMessage[BUFSIZE];
+                snprintf(logMessage, BUFSIZE, "option=%c, filename=%s, offset=%d, data=%s", WRITE, filename, offset, data);
+                write_log(LOG_INFO, logMessage);
+
                 fclose(fp);
                 strcpy(buf, "Data written successfully");
             }
@@ -96,7 +103,11 @@ int main(int argc, char const *argv[])
             }
 
             else if (*option == DELETE) {
-                if (unlink(get(hashMap, FILENAME)) == 0) {
+                char* filename = get(hashMap, FILENAME);
+                if (unlink(filename) == 0) {
+                    char logMessage[BUFSIZE];
+                    snprintf(logMessage, BUFSIZE, "option=%c, filename=%s", DELETE, filename);
+                    write_log(LOG_INFO, logMessage);
                     strcpy(buf, "File deleted successfully");
                 } else {
                     strcpy(buf, "Error deleting file");
