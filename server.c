@@ -60,7 +60,7 @@ int main(int argc, char const *argv[])
                     fseek(fp, atoi(offset), SEEK_SET);                
                 }
                 
-                fwrite(data, sizeof(char), strlen(data), fp);
+                fputs(data, fp);
                 fclose(fp);
                 strcpy(buf, "Data written successfully");
             }
@@ -72,12 +72,12 @@ int main(int argc, char const *argv[])
 
                 fp = fopen(filename, "r");
                 if (fp == NULL) {
-                    perror("Error opening file");
+                    strcpy(buf, "Error opening file");
                 }
-                
-                fseek(fp, atoi(offset), SEEK_SET);
-                size_t result = fread(buf, 1, strtoul(length, NULL, 10), fp);
-                buf[result] = '\0';
+                else {
+                    fseek(fp, atoi(offset), SEEK_SET);
+                    fgets(buf, strtoul(length, NULL, 10) + 1, fp);
+                }
                 fclose(fp);
             }
 
