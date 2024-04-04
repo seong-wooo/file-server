@@ -25,6 +25,7 @@ int main(int argc, char const *argv[])
     char buf[BUFSIZE + 1];
     int hash_size = 10;
     FILE* fp;
+    FILE* lfp;
 
     while (1) {
         client_sock = _accept(listen_sock, &client_addr);
@@ -47,7 +48,7 @@ int main(int argc, char const *argv[])
             char* option = get(hashMap, OPTION);
             if (*option == WRITE) {
                 char* filename = get(hashMap, FILENAME);
-                char* offset = get(hashMap, OFFSET);
+                int offset = atoi(get(hashMap, OFFSET));
                 char* data = get(hashMap, DATA);
                 
                 fp = fopen(filename, "r+");
@@ -56,10 +57,17 @@ int main(int argc, char const *argv[])
                     if (fp == NULL) {
                         perror("Error opening file");
                     }
-                } else {
-                    fseek(fp, atoi(offset), SEEK_SET);                
-                }
+                    offset = 0;
+                } 
                 
+                fseek(fp, 0, SEEK_END);
+                long fileSize = ftell(fp);
+                if (offset > fileSize) {
+                    offset = fileSize;
+                } 
+                    
+                fseek(fp, offset, SEEK_SET);                
+
                 fputs(data, fp);
                 fclose(fp);
                 strcpy(buf, "Data written successfully");
@@ -75,8 +83,14 @@ int main(int argc, char const *argv[])
                     strcpy(buf, "Error opening file");
                 }
                 else {
-                    fseek(fp, atoi(offset), SEEK_SET);
-                    fgets(buf, strtoul(length, NULL, 10) + 1, fp);
+                    fseek(fp, 0, SEEK_END);
+                    long fileSize = ftell(fp);
+                    if (atoi(offset) > fileSize) {
+                        strcpy(buf, "Offset is greater than file size");
+                    } else {
+                        fseek(fp, atoi(offset), SEEK_SET);
+                        fgets(buf, strtoul(length, NULL, 10) + 1, fp);
+                    }
                 }
                 fclose(fp);
             }
