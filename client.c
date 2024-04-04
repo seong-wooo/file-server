@@ -12,8 +12,8 @@ void _get_delete(char* request);
 int _get_option(void);
 int _get_offset(void);
 int _get_length(void);
-void _get_data(char* data);
-void _get_filename(char* filename);
+char* _get_data(void);
+char* _get_filename(void);
 
 int main(int argc, char *argv[])
 {
@@ -84,8 +84,9 @@ void _connect_to_server(SOCKET sock, char* ip, int port) {
 int _get_option(void) {
     char option;
     do {
+        fseek(stdin, 0, SEEK_END);
         printf("[파일 리스트 조회: %c / 파일 읽기 : %c / 파일 쓰기 : %c / 파일 삭제 : %c / 종료 : %c]: ", LIST, READ, WRITE, DELETE, QUIT);
-        scanf("%c", &option);
+        option = getchar();
         getchar();
     } while (option != LIST && option != READ && option != WRITE && option != DELETE && option != QUIT);
 
@@ -97,33 +98,38 @@ void _get_list(char* request) {
 }
 
 void _get_read(char* request) {
-    char filename[100];
+    char* filename;
     int offset;
     int length;
 
-    _get_filename(filename);
+    filename = _get_filename();
     offset = _get_offset();
     length = _get_length();
     sprintf(request, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%d", OPTION, TOKEN_PARSER, READ, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, LENGTH, TOKEN_PARSER, length);
+    free(filename);
 }
 
 void _get_write(char* request) {
-    char filename[1000];
+    char* filename;
     int offset;
     int length;
-    char data[1000];
+    char* data;
 
-    _get_filename(filename);
+    filename = _get_filename();
     offset = _get_offset();
-    _get_data(data);
+    data = _get_data();
     sprintf(request, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%s", OPTION, TOKEN_PARSER, WRITE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, DATA, TOKEN_PARSER, data);
+    
+    free(filename);
+    free(data);
 }
 
 void _get_delete(char* request) {
-    char filename[1000];
+    char* filename;
 
-    _get_filename(filename);
+    filename = _get_filename();
     sprintf(request, "%s%s%c%s%s%s%s", OPTION, TOKEN_PARSER, DELETE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename);
+    free(filename);
 }
 
 int _get_offset(void) {
@@ -131,6 +137,7 @@ int _get_offset(void) {
     printf("[오프셋]: ");
     scanf("%d", &offset);
     getchar();
+    
     return offset;
 }
 
@@ -139,17 +146,32 @@ int _get_length(void) {
     printf("[읽을 길이]: ");
     scanf("%d", &length);
     getchar();
+    
     return length;
 }
 
-void _get_data(char* data) {
+char* _get_data(void) {
+    char temp[1000];
+    char* data;
+
     printf("[쓸 내용]: ");
-    fgets(data, sizeof(data), stdin); // todo 여기 수정
-    printf("data: %s\n", data);
+    fgets(temp, sizeof(temp), stdin);
+    temp[strlen(temp) - 1] = '\0';
+    data = (char *)malloc(strlen(temp) + 1);
+    strcpy(data, temp);
+    
+    return data;
 }
 
-void _get_filename(char* filename) {
-    printf("[파일 이름]: ");
-    scanf("%s", filename);
-    getchar();
+char* _get_filename(void) {
+    char temp[1000];
+    char* filename;
+
+    printf("[파일명]: ");
+    fgets(temp, sizeof(temp), stdin);
+    temp[strlen(temp) - 1] = '\0';
+    filename = (char *)malloc(strlen(temp) + 1);
+    strcpy(filename, temp);
+    
+    return filename;
 }
