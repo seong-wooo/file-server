@@ -40,10 +40,10 @@ void *process_client(void *arg)
             int offset = atoi(get(hashMap, OFFSET));
             char *data = get(hashMap, DATA);
 
-            fp = fopen(filename, "r+");
+            fp = fopen(filename, "rb+");
             if (fp == NULL)
             {
-                fp = fopen(filename, "w");
+                fp = fopen(filename, "wb");
                 if (fp == NULL)
                 {
                     perror("Error opening file");
@@ -59,7 +59,7 @@ void *process_client(void *arg)
             }
 
             fseek(fp, offset, SEEK_SET);
-            fputs(data, fp);
+            fwrite(data, sizeof(char), strlen(data), fp);
 
             char logMessage[BUFSIZE];
             snprintf(logMessage, BUFSIZE, "option=%c, filename=%s, offset=%d, data=%s", WRITE, filename, offset, data);
@@ -72,8 +72,8 @@ void *process_client(void *arg)
         else if (*option == READ)
         {
             char *filename = get(hashMap, FILENAME);
-            char *offset = get(hashMap, OFFSET);
-            char *length = get(hashMap, LENGTH);
+            int offset = atoi(get(hashMap, OFFSET));
+            int length = atoi(get(hashMap, LENGTH));
 
             fp = fopen(filename, "r");
             if (fp == NULL) {
@@ -82,14 +82,16 @@ void *process_client(void *arg)
             else {
                 fseek(fp, 0, SEEK_END);
                 long fileSize = ftell(fp);
-                if (atoi(offset) > fileSize)
+                if (offset > fileSize)
                 {
                     strcpy(buf, "Offset is greater than file size");
                 }
                 else
                 {
-                    fseek(fp, atoi(offset), SEEK_SET);
-                    fgets(buf, strtoul(length, NULL, 10) + 1, fp);
+                    fseek(fp, offset, SEEK_SET);
+                    length = (offset + length > fileSize) ? fileSize - offset : length;
+                    fread(buf, sizeof(char), length, fp);
+                    buf[length] = '\0';
                 }
                 fclose(fp);
             }
