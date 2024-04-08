@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <stdbool.h>
 
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR   -1

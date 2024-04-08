@@ -1,5 +1,4 @@
 #include "wthr.h"
-#include <pthread.h>
 #include <poll.h>
 #include <sys/select.h>
 #include <fcntl.h> 
@@ -30,6 +29,9 @@ int pipefd[2];
 
 int main(int argc, char const *argv[])
 {
+    WTHR_QUEUE jobs;
+    init_wthr_pool(&jobs);
+    
     int retval;
     SOCKET listen_sock = create_socket();
     _bind(listen_sock, SERVERPORT);
@@ -93,7 +95,6 @@ int main(int argc, char const *argv[])
                     remove_socket_info(i);
                     break;
                 }
-
                 else if (retval == 0) {
                     remove_socket_info(i);
                 }
@@ -101,16 +102,9 @@ int main(int argc, char const *argv[])
                     ptr->recvbytes = retval;
 					ptr->buf[ptr->recvbytes] = '\0';
                     Job job = {client_sock, ptr->buf, pipefd[1]};
-
-                    retval = pthread_create(&wthr, NULL, process_client, (void *) &job);
-                    if (retval != 0)
-                    {
-                        close(client_sock);
-                    }
-					
+                    enqueue(&jobs, job);
                 }
             }
-
             else if (poll_fds[i].revents & POLLOUT) 
             {
                 if (poll_fds[1].revents & POLLIN) {
