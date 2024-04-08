@@ -52,7 +52,7 @@ void *process_client(void *arg)
 
         fseek(fp, offset, SEEK_SET);
         fwrite(data, sizeof(char), strlen(data), fp);
-
+        
         char logMessage[BUFSIZE];
         snprintf(logMessage, BUFSIZE, "option=%c, filename=%s, offset=%d, data=%s", WRITE, filename, offset, data);
         write_log(LOG_INFO, logMessage);
@@ -122,7 +122,6 @@ void *process_client(void *arg)
 
         closedir(dir);
     }
-
     freeHashMap(hashMap);
 
     write(job->pipefd, response, strlen(response));

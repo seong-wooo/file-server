@@ -1,5 +1,9 @@
 #include "wthr.h"
 #include <pthread.h>
+#include <poll.h>
+#include <sys/select.h>
+#include <fcntl.h> 
+#include <stdbool.h>
 
 #define SERVERPORT 9000
 #define BUFSIZE 10000
@@ -7,70 +11,126 @@
 void _bind(SOCKET sock, int port);
 void _listen(SOCKET sock, int maxconn);
 SOCKET _accept(SOCKET sock, struct sockaddr_in *client_addr);
+void nonblock(SOCKET sock);
+bool AddSocketInfo(SOCKET sock);
+void remove_socket_info(int index);
 void _print_connected_client(struct sockaddr_in* client_addr);
 void _print_disconnected_client(struct sockaddr_in* client_addr);
+
+typedef struct SOCKETINFO {
+    char buf[BUFSIZE + 1];
+    int recvbytes;
+    int sendbytes;
+} SOCKETINFO;
+int total_fds = 0;
+
+SOCKETINFO *socket_info[FD_SETSIZE];
+struct pollfd poll_fds[FD_SETSIZE];
+int pipefd[2];
 
 int main(int argc, char const *argv[])
 {
     int retval;
-    char buf[BUFSIZE];
     SOCKET listen_sock = create_socket();
     _bind(listen_sock, SERVERPORT);
     _listen(listen_sock, SOMAXCONN);
 
-    int pipefd[2];
+    nonblock(listen_sock);
+
+    poll_fds[0].fd = listen_sock;
+    poll_fds[0].events = POLLIN;
+    ++total_fds;
+
     if (pipe(pipefd) < 0)
     {
         perror("pipe");
         return 0;
     }
 
+    poll_fds[1].fd = pipefd[0];
+    poll_fds[1].events = POLLIN;
+    ++total_fds;
+
+	int nready;
     SOCKET client_sock;
     struct sockaddr_in client_addr;
     pthread_t wthr;
 
     while (1)
     {
-        client_sock = _accept(listen_sock, &client_addr);
-        _print_connected_client(&client_addr);
-        
-        while(1) {
-            retval = recv(client_sock, buf, BUFSIZE, 0);
-            if (retval == SOCKET_ERROR)
-            {
-                err_display("recv()");
-                break;
+        for (int i = 2; i < total_fds; i++) {
+			if (socket_info[i]->recvbytes > socket_info[i]->sendbytes)
+			{
+                poll_fds[i].events = POLLOUT; 
+            }
+			else
+				poll_fds[i].events = POLLIN; 
+		}
+
+        nready = poll(poll_fds, total_fds, -1);
+        if (nready == SOCKET_ERROR)
+        {
+            perror("poll");
+            break;
+        }
+
+        if (poll_fds[0].revents & POLLIN) {
+            client_sock = _accept(listen_sock, &client_addr);
+            _print_connected_client(&client_addr);
+
+            if (--nready <= 0)
+                continue;
+        }
+
+        for (int i = 2; i < total_fds; i++) {
+            SOCKETINFO *ptr = socket_info[i];
+            SOCKET sock = poll_fds[i].fd;
+
+            if (poll_fds[i].revents & POLLIN) {
+                retval = recv(sock, ptr->buf, BUFSIZE, 0);
+                if (retval == SOCKET_ERROR) {
+                    err_display("recv()");
+                    remove_socket_info(i);
+                    break;
+                }
+
+                else if (retval == 0) {
+                    remove_socket_info(i);
+                }
+                else {
+                    ptr->recvbytes = retval;
+					ptr->buf[ptr->recvbytes] = '\0';
+                    Job job = {client_sock, ptr->buf, pipefd[1]};
+
+                    retval = pthread_create(&wthr, NULL, process_client, (void *) &job);
+                    if (retval != 0)
+                    {
+                        close(client_sock);
+                    }
+					
+                }
             }
 
-            else if (retval == 0)
+            else if (poll_fds[i].revents & POLLOUT) 
             {
-                break;
-            }
-
-            Job job = {client_sock, buf, pipefd[1]};
-            
-            retval = pthread_create(&wthr, NULL, process_client, (void *) &job);
-            if (retval != 0)
-            {
-                close(client_sock);
-            }
-            printf("대기중!");
-            pthread_join(wthr, NULL);
-            printf("종료!");
-            
-            read(pipefd[0], buf, sizeof(buf));
-
-            retval = send(client_sock, buf, BUFSIZE, 0);
-            if (retval == SOCKET_ERROR)
-            {
-                err_display("send()");
-                break;
+                if (poll_fds[1].revents & POLLIN) {
+                    read(pipefd[0], ptr->buf, sizeof(ptr->buf));
+                    retval = send(client_sock, ptr->buf, BUFSIZE, 0);
+                    if (retval == SOCKET_ERROR)
+                    {
+                        err_display("send()");
+                        remove_socket_info(i);
+                        break;
+                    }
+                    else 
+                    {
+                            ptr->recvbytes = ptr->sendbytes = 0;
+                    }
+                }
             }
         }
-        close(client_sock);
-        _print_disconnected_client(&client_addr);
     }
-
+        
     close(listen_sock);
     printf("[TCP 서버] 서버 종료\n");
 
@@ -112,10 +172,69 @@ SOCKET _accept(SOCKET sock, struct sockaddr_in *client_addr)
     if (client_sock == INVALID_SOCKET)
     {
         err_display("accept()");
+    } 
+    
+    else 
+    {
+        nonblock(client_sock);
+        if (!AddSocketInfo(client_sock))
+        {
+            close(client_sock);
+        }
     }
 
     return client_sock;
 }
+
+void nonblock(SOCKET sock) {
+    int flags = fcntl(sock, F_GETFL, 0);
+    flags |= O_NONBLOCK;
+    fcntl(sock, F_SETFL, flags);
+}
+
+bool AddSocketInfo(SOCKET sock)
+{
+	if (total_fds >= FD_SETSIZE) {
+		printf("[오류] 소켓 정보를 추가할 수 없습니다!\n");
+		return false;
+	}
+	SOCKETINFO *ptr = (SOCKETINFO *)malloc(sizeof(SOCKETINFO));
+	if (ptr == NULL) {
+		printf("[오류] 메모리가 부족합니다!\n");
+		return false;
+	}
+	ptr->recvbytes = 0;
+	ptr->sendbytes = 0;
+	socket_info[total_fds] = ptr;
+
+	poll_fds[total_fds].fd = sock;
+	poll_fds[total_fds].events = POLLIN;
+
+	++total_fds;
+	return true;
+}
+
+void remove_socket_info(int index)
+{
+	SOCKETINFO *ptr = socket_info[index];
+	SOCKET sock = poll_fds[index].fd;
+
+	struct sockaddr_in clientaddr;
+	socklen_t addrlen = sizeof(clientaddr);
+	getpeername(sock, (struct sockaddr *)&clientaddr, &addrlen);
+    _print_disconnected_client(&clientaddr);
+
+	// 소켓 닫기
+	close(sock);
+	free(ptr);
+
+	if (index != (total_fds - 1)) {
+		socket_info[index] = socket_info[total_fds - 1];
+		poll_fds[index] = poll_fds[total_fds - 1];
+	}
+	--total_fds;
+}
+
 
 void _print_connected_client(struct sockaddr_in* client_addr) {
     char client_ip[20];
