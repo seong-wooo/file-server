@@ -16,7 +16,6 @@ HashMap *_parse_body(int hash_size, char *buf);
 typedef struct {
     SOCKET client_sock;
     char *data;
-    int pipefd;
 } Job;
 
 typedef struct {
@@ -29,7 +28,10 @@ typedef struct {
     pthread_cond_t full_cond;
 } WTHR_QUEUE;
 
-void init_wthr_pool(WTHR_QUEUE *jobs) {
+int cthred_pipefd;
+
+void init_wthr_pool(WTHR_QUEUE *jobs, int pipefd) {
+    cthred_pipefd = pipefd;    
     jobs->front = 0;
     jobs->rear = -1;
     jobs->size = 0;
@@ -195,7 +197,7 @@ void *process_client(void *arg)
         }
         freeHashMap(hashMap);
 
-        write(job->pipefd, response, strlen(response));
+        write(cthred_pipefd, response, strlen(response));
     }
 };
 

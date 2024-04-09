@@ -28,10 +28,7 @@ struct pollfd poll_fds[FD_SETSIZE];
 int pipefd[2];
 
 int main(int argc, char const *argv[])
-{
-    WTHR_QUEUE jobs;
-    init_wthr_pool(&jobs);
-    
+{   
     int retval;
     SOCKET listen_sock = create_socket();
     _bind(listen_sock, SERVERPORT);
@@ -52,6 +49,9 @@ int main(int argc, char const *argv[])
     poll_fds[1].fd = pipefd[0];
     poll_fds[1].events = POLLIN;
     ++total_fds;
+
+    WTHR_QUEUE jobs;
+    init_wthr_pool(&jobs, pipefd[1]);
 
 	int nready;
     SOCKET client_sock;
@@ -101,7 +101,7 @@ int main(int argc, char const *argv[])
                 else {
                     ptr->recvbytes = retval;
 					ptr->buf[ptr->recvbytes] = '\0';
-                    Job job = {client_sock, ptr->buf, pipefd[1]};
+                    Job job = {client_sock, ptr->buf};
                     enqueue(&jobs, job);
                 }
             }
