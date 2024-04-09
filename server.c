@@ -101,7 +101,7 @@ int main(int argc, char const *argv[])
                 else {
                     ptr->recvbytes = retval;
 					ptr->buf[ptr->recvbytes] = '\0';
-                    Job job = {client_sock, ptr->buf};
+                    Job job = {sock, ptr->buf};
                     enqueue(&jobs, job);
                 }
             }
@@ -109,7 +109,8 @@ int main(int argc, char const *argv[])
             {
                 if (poll_fds[1].revents & POLLIN) {
                     read(pipefd[0], ptr->buf, sizeof(ptr->buf));
-                    retval = send(client_sock, ptr->buf, BUFSIZE, 0);
+                    ptr->buf[strlen(ptr->buf)] = '\0';
+                    retval = send(sock, ptr->buf, BUFSIZE, 0);
                     if (retval == SOCKET_ERROR)
                     {
                         err_display("send()");
