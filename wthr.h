@@ -192,12 +192,13 @@ void *process_client(void *arg)
                 strcat(response, entry->d_name);
                 strcat(response, "\n");
             }
+            strcat(response, "\0");
 
             closedir(dir);
         }
         freeHashMap(hashMap);
 
-        write(cthred_pipefd, response, strlen(response));
+        write(cthred_pipefd, response, BUFSIZE);
     }
 };
 

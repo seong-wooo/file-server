@@ -88,6 +88,7 @@ int main(int argc, char const *argv[])
             SOCKET sock = poll_fds[i].fd;
 
             if (poll_fds[i].revents & POLLIN) {
+
                 retval = recv(sock, ptr->buf, BUFSIZE, 0);
                 if (retval == SOCKET_ERROR) {
                     err_display("recv()");
@@ -107,7 +108,7 @@ int main(int argc, char const *argv[])
             else if (poll_fds[i].revents & POLLOUT) 
             {
                 if (poll_fds[1].revents & POLLIN) {
-                    read(pipefd[0], ptr->buf, sizeof(ptr->buf));
+                    read(pipefd[0], ptr->buf, BUFSIZE);
                     ptr->buf[strlen(ptr->buf)] = '\0';
                     retval = send(sock, ptr->buf, BUFSIZE, 0);
                     if (retval == SOCKET_ERROR)
@@ -118,7 +119,7 @@ int main(int argc, char const *argv[])
                     }
                     else 
                     {
-                            ptr->recvbytes = ptr->sendbytes = 0;
+                        ptr->recvbytes = ptr->sendbytes = 0;
                     }
                 }
             }

@@ -4,10 +4,10 @@ char *SERVERIP = (char *) "127.0.0.1";
 #define BUFSIZE 10000
 
 void _connect_to_server(SOCKET sock, char* ip, int port);
-void _get_list(char* request);
-void _get_read(char* request);
-void _get_write(char* request);
-void _get_delete(char* request);
+void _get_list(char* buf);
+void _get_read(char* buf);
+void _get_write(char* buf);
+void _get_delete(char* buf);
 int _get_option(void);
 int _get_offset(void);
 int _get_length(void);
@@ -21,34 +21,33 @@ int main(int argc, char *argv[])
     SOCKET sock = create_socket();
     _connect_to_server(sock, SERVERIP, SERVERPORT);
     
-    char buf[BUFSIZE + 1];
     char option;
-    char request[512];
+    char buf[BUFSIZE];
 
     while(1) {
         option = _get_option();
         
         if (option == LIST) {
-            _get_list(request);
+            _get_list(buf);
         }
 
         else if (option == READ) {
-            _get_read(request);
+            _get_read(buf);
         }
 
         else if (option == WRITE) {
-            _get_write(request);
+            _get_write(buf);
         } 
         
         else if (option == DELETE) {
-            _get_delete(request);
+            _get_delete(buf);
         }
         
         else {
             break;
         }
 
-        retval = send(sock, request, (int)strlen(request), 0);
+        retval = send(sock, buf, BUFSIZE, 0);
         if (retval == SOCKET_ERROR) {
             err_display("send()");
             break;
@@ -92,11 +91,11 @@ int _get_option(void) {
     return option;
 }
 
-void _get_list(char* request) {
-    sprintf(request, "%s%s%c", OPTION, TOKEN_PARSER, LIST);
+void _get_list(char* buf) {
+    sprintf(buf, "%s%s%c", OPTION, TOKEN_PARSER, LIST);
 }
 
-void _get_read(char* request) {
+void _get_read(char* buf) {
     char* filename;
     int offset;
     int length;
@@ -104,11 +103,11 @@ void _get_read(char* request) {
     filename = _get_filename();
     offset = _get_offset();
     length = _get_length();
-    sprintf(request, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%d", OPTION, TOKEN_PARSER, READ, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, LENGTH, TOKEN_PARSER, length);
+    sprintf(buf, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%d", OPTION, TOKEN_PARSER, READ, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, LENGTH, TOKEN_PARSER, length);
     free(filename);
 }
 
-void _get_write(char* request) {
+void _get_write(char* buf) {
     char* filename;
     int offset;
     int length;
@@ -117,17 +116,17 @@ void _get_write(char* request) {
     filename = _get_filename();
     offset = _get_offset();
     data = _get_data();
-    sprintf(request, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%s", OPTION, TOKEN_PARSER, WRITE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, DATA, TOKEN_PARSER, data);
+    sprintf(buf, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%s", OPTION, TOKEN_PARSER, WRITE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, DATA, TOKEN_PARSER, data);
     
     free(filename);
     free(data);
 }
 
-void _get_delete(char* request) {
+void _get_delete(char* buf) {
     char* filename;
 
     filename = _get_filename();
-    sprintf(request, "%s%s%c%s%s%s%s", OPTION, TOKEN_PARSER, DELETE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename);
+    sprintf(buf, "%s%s%c%s%s%s%s", OPTION, TOKEN_PARSER, DELETE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename);
     free(filename);
 }
 
