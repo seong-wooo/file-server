@@ -12,6 +12,8 @@
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR   -1
 
+#define SERVERPORT 9000
+
 #define READ 'r'
 #define WRITE 'w'
 #define DELETE 'd'

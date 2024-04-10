@@ -4,7 +4,6 @@
 #include <fcntl.h> 
 #include <stdbool.h>
 
-#define SERVERPORT 9000
 #define BUFSIZE 10000
 
 void _bind(SOCKET sock, int port);
