@@ -47,13 +47,13 @@ int main(int argc, char *argv[])
             break;
         }
 
-        retval = send(sock, buf, BUFSIZE, 0);
+        retval = send(sock, buf, BUFSIZE, MSG_WAITALL);
         if (retval == SOCKET_ERROR) {
             err_display("send()");
             break;
         }
 
-        retval = recv(sock, buf, BUFSIZE, 0);
+        retval = recv(sock, buf, BUFSIZE, MSG_WAITALL);
         if (retval == SOCKET_ERROR) {
             err_display("recv()");
             break;

@@ -9,14 +9,13 @@
 void _bind(SOCKET sock, int port);
 void _listen(SOCKET sock, int maxconn);
 SOCKET _accept(SOCKET sock, struct sockaddr_in *client_addr);
-void nonblock(SOCKET sock);
 bool AddSocketInfo(SOCKET sock);
 void remove_socket_info(int index);
 void _print_connected_client(struct sockaddr_in* client_addr);
 void _print_disconnected_client(struct sockaddr_in* client_addr);
 
 typedef struct SOCKETINFO {
-    char buf[BUFSIZE + 1];
+    char buf[BUFSIZE];
     int recvbytes;
     int sendbytes;
 } SOCKETINFO;
@@ -32,8 +31,6 @@ int main(int argc, char const *argv[])
     SOCKET listen_sock = create_socket();
     _bind(listen_sock, SERVERPORT);
     _listen(listen_sock, SOMAXCONN);
-
-    nonblock(listen_sock);
 
     poll_fds[0].fd = listen_sock;
     poll_fds[0].events = POLLIN;
@@ -88,8 +85,7 @@ int main(int argc, char const *argv[])
             SOCKET sock = poll_fds[i].fd;
 
             if (poll_fds[i].revents & POLLIN) {
-
-                retval = recv(sock, ptr->buf, BUFSIZE, 0);
+                retval = recv(sock, ptr->buf, BUFSIZE, MSG_WAITALL);
                 if (retval == SOCKET_ERROR) {
                     err_display("recv()");
                     remove_socket_info(i);
@@ -110,7 +106,7 @@ int main(int argc, char const *argv[])
                 if (poll_fds[1].revents & POLLIN) {
                     read(pipefd[0], ptr->buf, BUFSIZE);
                     ptr->buf[strlen(ptr->buf)] = '\0';
-                    retval = send(sock, ptr->buf, BUFSIZE, 0);
+                    retval = send(sock, ptr->buf, BUFSIZE, MSG_WAITALL);
                     if (retval == SOCKET_ERROR)
                     {
                         err_display("send()");
@@ -171,7 +167,6 @@ SOCKET _accept(SOCKET sock, struct sockaddr_in *client_addr)
     
     else 
     {
-        nonblock(client_sock);
         if (!AddSocketInfo(client_sock))
         {
             close(client_sock);
@@ -179,12 +174,6 @@ SOCKET _accept(SOCKET sock, struct sockaddr_in *client_addr)
     }
 
     return client_sock;
-}
-
-void nonblock(SOCKET sock) {
-    int flags = fcntl(sock, F_GETFL, 0);
-    flags |= O_NONBLOCK;
-    fcntl(sock, F_SETFL, flags);
 }
 
 bool AddSocketInfo(SOCKET sock)
