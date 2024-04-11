@@ -4,8 +4,6 @@
 #include <fcntl.h> 
 #include <stdbool.h>
 
-#define BUFSIZE 10000
-
 void _bind(SOCKET sock, int port);
 void _listen(SOCKET sock, int maxconn);
 SOCKET _accept(SOCKET sock, struct sockaddr_in *client_addr);
@@ -208,7 +206,6 @@ void remove_socket_info(int index)
 	getpeername(sock, (struct sockaddr *)&clientaddr, &addrlen);
     _print_disconnected_client(&clientaddr);
 
-	// 소켓 닫기
 	close(sock);
 	free(ptr);
 

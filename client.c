@@ -1,7 +1,6 @@
 #include "Common.h"
 
 char *SERVERIP = (char *) "127.0.0.1";
-#define BUFSIZE 10000
 
 void _connect_to_server(SOCKET sock, char* ip, int port);
 void _get_list(char* buf);

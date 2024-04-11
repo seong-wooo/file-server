@@ -13,6 +13,7 @@
 #define SOCKET_ERROR   -1
 
 #define SERVERPORT 9000
+#define BUFSIZE 10000
 
 #define READ 'r'
 #define WRITE 'w'
