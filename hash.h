@@ -106,3 +106,14 @@ void freeHashMap(HashMap* hashMap) {
     free(hashMap->buckets);
     free(hashMap);
 }
+
+char* strdup(const char* str) {
+    size_t len = strlen(str) + 1; // 문자열 길이 + NULL 문자
+    char* new_str = (char*)malloc(len); // 메모리 할당
+    if (new_str == NULL) {
+        fprintf(stderr, "Memory allocation failed.\n");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(new_str, str); // 문자열 복사
+    return new_str;
+}
