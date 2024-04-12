@@ -44,7 +44,7 @@ int main(int argc, char const *argv[])
     poll_fds[1].events = POLLIN;
     ++total_fds;
 
-    WTHR_QUEUE jobs;
+    Queue jobs;
     init_wthr_pool(&jobs, pipefd[1]);
 
 	int nready;
