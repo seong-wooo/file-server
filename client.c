@@ -2,47 +2,48 @@
 
 char *SERVERIP = (char *) "127.0.0.1";
 
-void _connect_to_server(SOCKET sock, char* ip, int port);
-void _get_list(char* buf);
-void _get_read(char* buf);
-void _get_write(char* buf);
-void _get_delete(char* buf);
-int _get_option(void);
-int _get_offset(void);
-int _get_length(void);
-char* _get_data(void);
-char* _get_filename(void);
+void connect_to_server(SOCKET sock, char* ip, int port);
+void get_list(char* buf);
+void get_read(char* buf);
+void get_write(char* buf);
+void get_delete(char* buf);
+int get_option(void);
+int get_offset(void);
+int get_length(void);
+char* get_data(void);
+char* get_filename(void);
 
 int main(int argc, char *argv[])
 {
     int retval;
 
     SOCKET sock = create_socket();
-    _connect_to_server(sock, SERVERIP, SERVERPORT);
+    connect_to_server(sock, SERVERIP, SERVERPORT);
     
     char option;
     char buf[BUFSIZE];
 
     while(1) {
-        option = _get_option();
-        
-        if (option == LIST) {
-            _get_list(buf);
+        switch (option = get_option()) 
+        {
+            case LIST:
+                get_list(buf);
+                break;
+            case READ:
+                get_read(buf);
+                break;
+            case WRITE:
+                get_write(buf);
+                break;
+            case DELETE:
+                get_delete(buf);
+                break;
+            default:
+                break;
         }
 
-        else if (option == READ) {
-            _get_read(buf);
-        }
-
-        else if (option == WRITE) {
-            _get_write(buf);
-        } 
-        
-        else if (option == DELETE) {
-            _get_delete(buf);
-        }
-        
-        else {
+        if (option == QUIT) {
+            printf("프로그램을 종료합니다.\n");
             break;
         }
 
@@ -66,7 +67,7 @@ int main(int argc, char *argv[])
     return 0;
 }   
 
-void _connect_to_server(SOCKET sock, char* ip, int port) {
+void connect_to_server(SOCKET sock, char* ip, int port) {
     int retval;
     struct sockaddr_in serveraddr;
 
@@ -78,7 +79,7 @@ void _connect_to_server(SOCKET sock, char* ip, int port) {
     if (retval == SOCKET_ERROR) err_quit("connect()");
 }
 
-int _get_option(void) {
+int get_option(void) {
     char option;
     do {
         fseek(stdin, 0, SEEK_END);
@@ -90,46 +91,46 @@ int _get_option(void) {
     return option;
 }
 
-void _get_list(char* buf) {
+void get_list(char* buf) {
     sprintf(buf, "%s%s%c", OPTION, TOKEN_PARSER, LIST);
 }
 
-void _get_read(char* buf) {
+void get_read(char* buf) {
     char* filename;
     int offset;
     int length;
 
-    filename = _get_filename();
-    offset = _get_offset();
-    length = _get_length();
+    filename = get_filename();
+    offset = get_offset();
+    length = get_length();
     sprintf(buf, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%d", OPTION, TOKEN_PARSER, READ, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, LENGTH, TOKEN_PARSER, length);
     free(filename);
 }
 
-void _get_write(char* buf) {
+void get_write(char* buf) {
     char* filename;
     int offset;
     int length;
     char* data;
 
-    filename = _get_filename();
-    offset = _get_offset();
-    data = _get_data();
+    filename = get_filename();
+    offset = get_offset();
+    data = get_data();
     sprintf(buf, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%s", OPTION, TOKEN_PARSER, WRITE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, DATA, TOKEN_PARSER, data);
     
     free(filename);
     free(data);
 }
 
-void _get_delete(char* buf) {
+void get_delete(char* buf) {
     char* filename;
 
-    filename = _get_filename();
+    filename = get_filename();
     sprintf(buf, "%s%s%c%s%s%s%s", OPTION, TOKEN_PARSER, DELETE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename);
     free(filename);
 }
 
-int _get_offset(void) {
+int get_offset(void) {
     int offset;
     printf("[오프셋]: ");
     scanf("%d", &offset);
@@ -138,7 +139,7 @@ int _get_offset(void) {
     return offset;
 }
 
-int _get_length(void) {
+int get_length(void) {
     int length;
     printf("[읽을 길이]: ");
     scanf("%d", &length);
@@ -147,7 +148,7 @@ int _get_length(void) {
     return length;
 }
 
-char* _get_data(void) {
+char* get_data(void) {
     char temp[1000];
     char* data;
 
@@ -160,7 +161,7 @@ char* _get_data(void) {
     return data;
 }
 
-char* _get_filename(void) {
+char* get_filename(void) {
     char temp[1000];
     char* filename;
 
