@@ -10,88 +10,125 @@
 #define MAX_QUEUE_SIZE 8
 #define HASH_SIZE 10
 
-void *process_client(void *arg);
+void *work(void *arg);
 HashMap *parse_body(int hash_size, char *buf);
 void write_flie(HashMap *body, char *response);
 void read_file(HashMap *body, char *response);
 void delete_file(HashMap *body, char *response);
 void read_list(HashMap *body, char *response);
 
+int cthred_pipefd;
+
 typedef struct {
     SOCKET client_sock;
     char *data;
 } Job;
 
-typedef struct {
-    Job queue[MAX_QUEUE_SIZE];
-    int front;
-    int rear;
-    int size;
-    pthread_mutex_t lock;
+typedef struct Node
+{
+    Job *job;
+    struct Node *next;
+} Node;
+
+typedef struct Queue
+{
+    Node *front;
+    Node *rear;
     pthread_cond_t empty_cond;
-    pthread_cond_t full_cond;
+    pthread_mutex_t mutex;
 } Queue;
 
-int cthred_pipefd;
+void init_queue(Queue *queue)
+{
+    queue->front = NULL;
+    queue->rear = NULL;
+    pthread_cond_init(&queue->empty_cond, NULL);
+    pthread_mutex_init(&queue->mutex, NULL);
+}
 
 void init_wthr_pool(Queue *queue, int pipefd) {
-    cthred_pipefd = pipefd;    
-    queue->front = 0;
-    queue->rear = -1;
-    queue->size = 0;
-    pthread_mutex_init(&queue->lock, NULL);
-    pthread_cond_init(&queue->empty_cond, NULL);
-    pthread_cond_init(&queue->full_cond, NULL);
-
+    init_queue(queue);
+    
+    cthred_pipefd = pipefd;
     pthread_t threads[MAX_THREADS];
     for (int i = 0; i < MAX_THREADS; i++) {
-        pthread_create(&threads[i], NULL, process_client, queue);
+        pthread_create(&threads[i], NULL, work, queue);
     }
 }
 
-bool is_queue_empty(Queue *queue) {
-    return (queue->size == 0);
-}
+void enqueue(Queue *queue, Job* job)
+{
+    Node *newNode = (Node *)malloc(sizeof(Node));
+    if (newNode == NULL)
+    {
+        printf("메모리 할당에 실패했습니다.\n");
+        return;
+    }
+    newNode->job = job;
+    newNode->next = NULL;
 
-bool is_queue_full(Queue *queue) {
-    return (queue->size == MAX_QUEUE_SIZE);
-}
+    pthread_mutex_lock(&queue->mutex);
 
-void enqueue(Queue *queue, Job job) {
-    pthread_mutex_lock(&queue->lock);
-    while (is_queue_full(queue)) {
-        pthread_cond_wait(&queue->full_cond, &queue->lock);
+    if (queue->rear == NULL)
+    {
+        queue->front = newNode;
+        queue->rear = newNode;
+    }
+    else
+    {
+        queue->rear->next = newNode;
+        queue->rear = newNode;
     }
     
-    queue->rear = (queue->rear + 1) % MAX_QUEUE_SIZE;
-    queue->queue[queue->rear] = job;
-    queue->size++;
-
     pthread_cond_signal(&queue->empty_cond);
-    pthread_mutex_unlock(&queue->lock);
+    pthread_mutex_unlock(&queue->mutex);
 }
 
-Job* dequeue(Queue *queue) {
-    pthread_mutex_lock(&queue->lock);
-    while (is_queue_empty(queue)) {
-        pthread_cond_wait(&queue->empty_cond, &queue->lock);
+
+Job* dequeue(Queue *queue)
+{
+    Job *job = NULL;
+    pthread_mutex_lock(&queue->mutex);
+    while (queue->front == NULL)
+    {
+        pthread_cond_wait(&queue->empty_cond, &queue->mutex);
     }
     
-    Job *job = &queue->queue[queue->front];
-    queue->front = (queue->front + 1) % MAX_QUEUE_SIZE;
-    queue->size--;
+    Node *temp = queue->front;
+    queue->front = queue->front->next;
 
-    pthread_cond_signal(&queue->full_cond);
-    pthread_mutex_unlock(&queue->lock);
+    if (queue->front == NULL)
+    {
+        queue->rear = NULL;
+    }
+
+    job = temp->job;
+    free(temp);
+    
+
+    pthread_mutex_unlock(&queue->mutex);
 
     return job;
 }
 
-void *process_client(void *arg)
+void freeQueue(Queue *queue) {
+    Node *current = queue->front;
+    while (current != NULL) {
+        Node *temp = current;
+        current = current->next;
+        free(temp);
+    }
+    pthread_mutex_destroy(&(queue->mutex));
+}
+
+void *work(void *arg)
 {   
     Queue *queue = (Queue *) arg;
     while(1) {
         Job *job = dequeue(queue);
+        if (job == NULL) {
+            continue;
+        }
         char response[BUFSIZE];
 
         HashMap *body = parse_body(HASH_SIZE, job->data);

@@ -44,8 +44,8 @@ int main(int argc, char const *argv[])
     poll_fds[1].events = POLLIN;
     ++total_fds;
 
-    Queue jobs;
-    init_wthr_pool(&jobs, pipefd[1]);
+    Queue queue;
+    init_wthr_pool(&queue, pipefd[1]);
 
 	int nready;
     SOCKET client_sock;
@@ -96,7 +96,7 @@ int main(int argc, char const *argv[])
                     ptr->recvbytes = retval;
 					ptr->buf[ptr->recvbytes] = '\0';
                     Job job = {sock, ptr->buf};
-                    enqueue(&jobs, job);
+                    enqueue(&queue, &job);
                 }
             }
             else if (poll_fds[i].revents & POLLOUT) 
@@ -119,7 +119,7 @@ int main(int argc, char const *argv[])
             }
         }
     }
-        
+    freeQueue(&queue); 
     close(listen_sock);
     printf("[TCP 서버] 서버 종료\n");
 
@@ -155,7 +155,7 @@ void _listen(SOCKET sock, int maxconn)
 SOCKET _accept(SOCKET sock, struct sockaddr_in *client_addr)
 {
     SOCKET client_sock;
-    int addrlen = sizeof(client_addr);
+    socklen_t addrlen = sizeof(client_addr);
 
     client_sock = accept(sock, (struct sockaddr *)client_addr, &addrlen);
     if (client_sock == INVALID_SOCKET)
