@@ -126,9 +126,6 @@ void *work(void *arg)
     Queue *queue = (Queue *) arg;
     while(1) {
         Job *job = dequeue(queue);
-        if (job == NULL) {
-            continue;
-        }
         char response[BUFSIZE];
 
         HashMap *body = parse_body(HASH_SIZE, job->data);
@@ -203,10 +200,6 @@ void write_flie(HashMap *body, char *response)
     }
 
     fseek(fp, offset, SEEK_SET);
-
-    // 내가 원하는 만큼 저장했나? 확인
-    // 예외 처리
-    // 시스템 콜을 사용하면서 신경썻떤것 메모하기
     fwrite(data, sizeof(char), strlen(data), fp);
 
     char logMessage[BUFSIZE];
