@@ -14,6 +14,7 @@
 
 #define SERVERPORT 9000
 #define BUFSIZE 10000
+#define HEADER_SIZE 20
 
 #define READ 'r'
 #define WRITE 'w'
@@ -21,6 +22,7 @@
 #define QUIT 'q'
 #define LIST 'l'
 
+#define BODY_SIZE_HEADER "bodysize"
 #define OPTION "option"
 #define FILENAME "filename"
 #define OFFSET "offset"
@@ -31,6 +33,12 @@
 #define TOKEN_PARSER ":"
 
 typedef int SOCKET;
+
+typedef struct PACKET {
+    char header[HEADER_SIZE];
+    char *body;
+    size_t bodySize;
+} PACKET;
 
 void err_quit(const char *msg) {
     char *msgbuf = strerror(errno);

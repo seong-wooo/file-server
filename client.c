@@ -3,6 +3,13 @@
 char *SERVERIP = (char *) "127.0.0.1";
 
 void connect_to_server(SOCKET sock, char* ip, int port);
+PACKET *create_packet(char option);
+void get_list_packet(PACKET *packet);
+void get_read_packet(PACKET *packet);
+void get_write_packet(PACKET *packet);
+void get_delete_packet(PACKET *packet);
+void send_packet(SOCKET sock, PACKET *packet);
+
 void get_list(char* buf);
 void get_read(char* buf);
 void get_write(char* buf);
@@ -19,12 +26,16 @@ int main(int argc, char *argv[])
 
     SOCKET sock = create_socket();
     connect_to_server(sock, SERVERIP, SERVERPORT);
-    
-    char option;
-    char buf[BUFSIZE];
 
+    char buf[BUFSIZE];
     while(1) {
-        switch (option = get_option()) 
+        char option = get_option();
+        PACKET *packet = create_packet(option);
+        send_packet(sock, packet);
+        recieve_packet(sock, packet);
+        free(packet);
+
+        switch (option) 
         {
             case LIST:
                 get_list(buf);
@@ -90,6 +101,132 @@ int get_option(void) {
 
     return option;
 }
+
+PACKET *create_packet(char option) {
+    PACKET *packet = (PACKET *)malloc(sizeof(PACKET));
+    if (packet == NULL) {
+        fprintf(stderr, "메모리 할당 실패\n");
+        return NULL;
+    }
+
+    memset(packet, 0, sizeof(PACKET));
+
+    switch (option) 
+        {
+            case LIST:
+                get_list_packet(packet);
+                break;
+
+            case READ:
+                get_read_packet(packet);
+                break;
+            
+            case WRITE:
+                get_write_packet(packet);
+                break;
+            case DELETE:
+                get_delete_packet(packet);
+                break;
+            default:
+                break;
+        }
+    printf("[보낼 데이터]:\n%s%s\n", packet->header, packet->body);
+    return packet;
+}
+void get_list_packet(PACKET *packet) {
+    packet->bodySize = strlen(OPTION) + strlen(TOKEN_PARSER) + sizeof(char);
+    packet->body = (char *)malloc(packet->bodySize + 1);
+    sprintf(packet->body, "%s%s%c", OPTION, TOKEN_PARSER, LIST);
+    sprintf(packet->header, "%s%s%zu\n", BODY_SIZE_HEADER, TOKEN_PARSER, packet->bodySize);
+}
+
+void get_read_packet(PACKET *packet) {
+    char temp[1000];
+    char *filename = get_filename();
+    int offset = get_offset();
+    int length = get_length();
+    sprintf(temp, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%d", OPTION, TOKEN_PARSER, READ, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, LENGTH, TOKEN_PARSER, length);
+    
+    free(filename);
+
+    packet->bodySize = strlen(temp);
+    packet->body = (char *)malloc(packet->bodySize + 1);
+    strcpy(packet->body, temp);
+    sprintf(packet->header, "%s%s%zu\n", BODY_SIZE_HEADER, TOKEN_PARSER, packet->bodySize);
+    
+}
+
+void get_write_packet(PACKET *packet) {
+    char temp[1000];
+    char *filename = get_filename();
+    int offset = get_offset();
+    char* data = get_data();
+    sprintf(temp, "%s%s%c%s%s%s%s%s%s%s%d%s%s%s%s", OPTION, TOKEN_PARSER, WRITE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename, LINE_PARSER, OFFSET, TOKEN_PARSER, offset, LINE_PARSER, DATA, TOKEN_PARSER, data);
+    
+    free(filename);
+    free(data);
+    
+    packet->bodySize = strlen(temp);
+    packet->body = (char *)malloc(packet->bodySize + 1);
+    strcpy(packet->body, temp);
+    sprintf(packet->header, "%s%s%zu\n", BODY_SIZE_HEADER, TOKEN_PARSER, packet->bodySize);
+}
+
+void get_delete_packet(PACKET *packet) {
+
+    char temp[1000];
+    char *filename = get_filename();
+    sprintf(temp, "%s%s%c%s%s%s%s", OPTION, TOKEN_PARSER, DELETE, LINE_PARSER, FILENAME, TOKEN_PARSER, filename);
+    
+    free(filename);
+    
+    packet->bodySize = strlen(temp);
+    packet->body = (char *)malloc(packet->bodySize + 1);
+    strcpy(packet->body, temp);
+    sprintf(packet->header, "%s%s%zu\n", BODY_SIZE_HEADER, TOKEN_PARSER, packet->bodySize);
+}
+
+void send_packet(SOCKET sock, PACKET *packet) {
+    size_t totalSize = strlen(packet->header) + packet->bodySize;
+    char *buf = (char *)malloc(totalSize + 1);
+    if (!buf) {
+        fprintf(stderr, "버퍼 할당 실패\n");
+        free_packet(packet);
+        return;
+    }
+    sprintf(buf, "%s%s", packet->header, packet->body);
+
+    int retval = send(sock, buf, totalSize, 0);
+    if (retval == SOCKET_ERROR) {
+        err_display("send()");
+        free_packet(packet);
+        free(buf);  
+        return;
+    }
+}
+
+void recieve_packet(SOCKET sock, PACKET *packet) {
+
+}
+
+void free_packet(PACKET *packet) {
+    if (packet) {
+        if (packet->body) {
+            free(packet->body);
+        }
+        free(packet);
+    }
+}
+
+
+
+
+
+
+
+
+
+
 
 void get_list(char* buf) {
     sprintf(buf, "%s%s%c", OPTION, TOKEN_PARSER, LIST);
