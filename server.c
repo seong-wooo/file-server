@@ -2,9 +2,9 @@
 #include <sys/epoll.h>
 #include <sys/select.h>
 
-void _bind(SOCKET sock, int port);
-void _listen(SOCKET sock, int maxconn);
-SOCKET _accept(SOCKET sock, struct sockaddr_in *client_addr);
+void bind_socket(SOCKET sock, int port);
+void listen_socket(SOCKET sock, int maxconn);
+SOCKET accept_socket(SOCKET sock, struct sockaddr_in *client_addr);
 void register_event(SOCKET sock, uint32_t events);
 void modify_events(struct epoll_event ev, uint32_t events);
 void remove_socket_info(int index);
@@ -23,8 +23,8 @@ int main(int argc, char const *argv[])
 {   
     int retval;
     SOCKET server_sock = create_socket();
-    _bind(server_sock, SERVERPORT);
-    _listen(server_sock, SOMAXCONN);
+    bind_socket(server_sock, SERVERPORT);
+    listen_socket(server_sock, SOMAXCONN);
 
     epollfd = epoll_create(1);
     if (epollfd < 0) {
@@ -62,7 +62,7 @@ int main(int argc, char const *argv[])
             SOCKETINFO *ptr = (SOCKETINFO *)events[i].data.ptr;
             
             if (ptr->sock == server_sock) {
-                client_sock = _accept(server_sock, &client_addr);
+                client_sock = accept_socket(server_sock, &client_addr);
                 print_connected_client(&client_addr);
                 if (--nready <= 0)
                 {
@@ -127,7 +127,7 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
-void _bind(SOCKET sock, int port)
+void bind_socket(SOCKET sock, int port)
 {
     int retval;
     struct sockaddr_in serveraddr;
@@ -142,7 +142,7 @@ void _bind(SOCKET sock, int port)
         err_quit("bind()");
 }
 
-void _listen(SOCKET sock, int maxconn)
+void listen_socket(SOCKET sock, int maxconn)
 {
     int retval;
 
@@ -153,7 +153,7 @@ void _listen(SOCKET sock, int maxconn)
     }
 }
 
-SOCKET _accept(SOCKET sock, struct sockaddr_in *client_addr)
+SOCKET accept_socket(SOCKET sock, struct sockaddr_in *client_addr)
 {
     SOCKET client_sock;
     socklen_t addrlen = sizeof(client_addr);
