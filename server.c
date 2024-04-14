@@ -50,7 +50,7 @@ int main(int argc, char const *argv[])
 	int nready;
     SOCKET client_sock;
     struct sockaddr_in client_addr;
-    pthread_t wthr;
+
 
     while (1)
     {
